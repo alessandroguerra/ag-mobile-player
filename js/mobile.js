@@ -58,7 +58,8 @@ const state = {
   filteredTracks: [],
   currentFilter: "all", // "all" | "pending" | "confirmed"
   currentIndex: -1,
-  currentObjectUrl: null
+  currentObjectUrl: null,
+  isBusy: false
 };
 
 // DOM Elements
@@ -105,6 +106,26 @@ const gdriveClientIdInput = document.getElementById("gdriveClientIdInput");
 const btnCloseModal = document.getElementById("btnCloseModal");
 const btnGoogleLogin = document.getElementById("btnGoogleLogin");
 const mToast = document.getElementById("mToast");
+const actionLoadingOverlay = document.getElementById("actionLoadingOverlay");
+const actionLoadingText = document.getElementById("actionLoadingText");
+const actionLoadingSub = document.getElementById("actionLoadingSub");
+
+function showLoadingOverlay(title = "Avvio prossimo brano...", subtitle = "Attendere il caricamento audio") {
+  state.isBusy = true;
+  if (actionLoadingText) actionLoadingText.textContent = title;
+  if (actionLoadingSub) actionLoadingSub.textContent = subtitle;
+  if (actionLoadingOverlay) actionLoadingOverlay.classList.add("active");
+  clearTimeout(window._agOverlaySafetyTimer);
+  window._agOverlaySafetyTimer = setTimeout(() => {
+    hideLoadingOverlay();
+  }, 15000);
+}
+
+function hideLoadingOverlay() {
+  state.isBusy = false;
+  clearTimeout(window._agOverlaySafetyTimer);
+  if (actionLoadingOverlay) actionLoadingOverlay.classList.remove("active");
+}
 
 function showToast(msg) {
   if (!mToast) return;
@@ -600,10 +621,25 @@ function updateDeckUI(track) {
   }
 }
 
-async function loadTrack(index, autoPlay = true) {
-  if (index < 0 || index >= state.filteredTracks.length) return;
+async function loadTrack(index, autoPlay = true, customOverlayTitle = null) {
+  if (index < 0 || index >= state.filteredTracks.length) {
+    hideLoadingOverlay();
+    return;
+  }
   state.currentIndex = index;
   const track = state.filteredTracks[index];
+
+  if (autoPlay) {
+    showLoadingOverlay(
+      customOverlayTitle || "🎵 Caricamento brano...",
+      `${track.artist} — ${track.title}`
+    );
+  }
+
+  // Metti subito in pausa l'audio precedente durante la transizione
+  try {
+    audioEl.pause();
+  } catch (e) {}
 
   updateDeckUI(track);
   renderTrackList();
@@ -620,7 +656,13 @@ async function loadTrack(index, autoPlay = true) {
   if (state.mode === "local") {
     audioEl.src = `/api/stream?file=${encodeURIComponent(track.filepath)}`;
     if (autoPlay) {
-      audioEl.play().catch(() => {});
+      try {
+        await audioEl.play();
+      } catch (e) {
+        hideLoadingOverlay();
+      }
+    } else {
+      hideLoadingOverlay();
     }
   } else {
     // Cloud Google Drive: arricchisci tag ID3 (64KB) e avvia stream autenticato
@@ -634,71 +676,99 @@ async function loadTrack(index, autoPlay = true) {
       state.currentObjectUrl = URL.createObjectURL(blob);
       audioEl.src = state.currentObjectUrl;
       if (autoPlay) {
-        audioEl.play().catch(() => {});
+        try {
+          await audioEl.play();
+        } catch (e) {
+          hideLoadingOverlay();
+        }
+      } else {
+        hideLoadingOverlay();
       }
     } catch (err) {
+      hideLoadingOverlay();
       showToast(`⚠️ ${err.message}`);
     }
   }
 }
 
-function playNext() {
+function playNext(customOverlayTitle = null) {
   if (state.currentIndex + 1 < state.filteredTracks.length) {
-    loadTrack(state.currentIndex + 1, true);
+    loadTrack(state.currentIndex + 1, true, customOverlayTitle);
   } else {
+    hideLoadingOverlay();
     showToast("Fine della lista raggiunta");
   }
 }
 
 function playPrev() {
+  if (state.isBusy) return;
   if (state.currentIndex - 1 >= 0) {
     loadTrack(state.currentIndex - 1, true);
   }
 }
 
 function seekRelative(deltaSec) {
-  if (!audioEl.duration) return;
+  if (state.isBusy || !audioEl.duration) return;
   audioEl.currentTime = Math.max(0, Math.min(audioEl.duration, audioEl.currentTime + deltaSec));
 }
 
 // ── AZIONI DJ: OK ASCOLTATO & CESTINA ──
 async function confirmCurrentAndNext() {
+  if (state.isBusy) return;
   const track = state.filteredTracks[state.currentIndex];
   if (!track) return;
 
-  track.confirmed = true;
-  if (state.mode === "local") {
-    const folderPath = state.localRootPaths[state.activeSource];
-    await fetch("/api/confirm_track", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        folder: folderPath,
-        file: track.filepath,
-        confirmed: true
-      })
-    });
-  } else {
-    state.confirmedSet.add(track.filepath);
-    saveCloudConfirmedTracks(state.activeSource).catch(() => {});
-  }
+  showLoadingOverlay("✅ Segno come Ascoltato...", "Avvio brano successivo in corso");
+  try {
+    audioEl.pause();
+  } catch (e) {}
 
-  showToast("✅ Confermato come ascoltato");
-  if (state.currentFilter === "pending") {
-    const prevIdx = state.currentIndex;
-    applyFiltersAndRender(false);
-    if (state.filteredTracks.length > 0) {
-      loadTrack(Math.min(prevIdx, state.filteredTracks.length - 1), true);
+  try {
+    track.confirmed = true;
+    if (state.mode === "local") {
+      const folderPath = state.localRootPaths[state.activeSource];
+      await fetch("/api/confirm_track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          folder: folderPath,
+          file: track.filepath,
+          confirmed: true
+        })
+      });
+    } else {
+      state.confirmedSet.add(track.filepath);
+      saveCloudConfirmedTracks(state.activeSource).catch(() => {});
     }
-  } else {
-    renderTrackList();
-    playNext();
+
+    showToast("✅ Confermato come ascoltato");
+    if (state.currentFilter === "pending") {
+      const prevIdx = state.currentIndex;
+      applyFiltersAndRender(false);
+      if (state.filteredTracks.length > 0) {
+        await loadTrack(Math.min(prevIdx, state.filteredTracks.length - 1), true, "✅ Avvio prossimo brano...");
+      } else {
+        hideLoadingOverlay();
+      }
+    } else {
+      renderTrackList();
+      playNext("✅ Avvio prossimo brano...");
+    }
+  } catch (err) {
+    hideLoadingOverlay();
+    showToast(`⚠️ ${err.message}`);
   }
 }
 
 async function trashCurrentAndNext() {
+  if (state.isBusy) return;
   const track = state.filteredTracks[state.currentIndex];
   if (!track) return;
+
+  showLoadingOverlay("🗑️ Spostamento nel Cestino...", "Avvio brano successivo in corso");
+  try {
+    audioEl.pause();
+  } catch (e) {}
 
   const prevIdx = state.currentIndex;
   try {
@@ -723,9 +793,12 @@ async function trashCurrentAndNext() {
     showToast(`🗑️ Cestinato: ${track.title}`);
     applyFiltersAndRender(false);
     if (state.filteredTracks.length > 0) {
-      loadTrack(Math.min(prevIdx, state.filteredTracks.length - 1), true);
+      await loadTrack(Math.min(prevIdx, state.filteredTracks.length - 1), true, "🗑️ Avvio prossimo brano...");
+    } else {
+      hideLoadingOverlay();
     }
   } catch (err) {
+    hideLoadingOverlay();
     showToast(`⚠️ ${err.message}`);
   }
 }
@@ -777,6 +850,7 @@ btnResume.addEventListener("click", () => {
 });
 
 btnPlayPause.addEventListener("click", () => {
+  if (state.isBusy) return;
   if (!audioEl.src && state.filteredTracks.length > 0) {
     loadTrack(0, true);
     return;
@@ -786,6 +860,16 @@ btnPlayPause.addEventListener("click", () => {
 });
 
 audioEl.addEventListener("play", () => { btnPlayPause.textContent = "⏸"; });
+audioEl.addEventListener("playing", () => {
+  btnPlayPause.textContent = "⏸";
+  hideLoadingOverlay();
+});
+audioEl.addEventListener("canplay", () => {
+  if (!audioEl.paused) hideLoadingOverlay();
+});
+audioEl.addEventListener("error", () => {
+  hideLoadingOverlay();
+});
 audioEl.addEventListener("pause", () => { btnPlayPause.textContent = "▶"; });
 audioEl.addEventListener("ended", () => { playNext(); });
 audioEl.addEventListener("timeupdate", () => {
@@ -800,8 +884,11 @@ scrubberSlider.addEventListener("input", () => {
   audioEl.currentTime = (parseFloat(scrubberSlider.value) / 100) * audioEl.duration;
 });
 
-btnPrev.addEventListener("click", playPrev);
-btnNext.addEventListener("click", playNext);
+btnPrev.addEventListener("click", () => playPrev());
+btnNext.addEventListener("click", () => {
+  if (state.isBusy) return;
+  playNext();
+});
 btnBack10.addEventListener("click", () => seekRelative(-10));
 btnFwd10.addEventListener("click", () => seekRelative(10));
 btnFwd30.addEventListener("click", () => seekRelative(30));
