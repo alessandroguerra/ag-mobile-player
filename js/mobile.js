@@ -29,10 +29,19 @@ const MUSICAL_TO_CAMELOT = {
   "g": "9B", "d": "10B", "a": "11B", "e": "12B"
 };
 
+const DEFAULT_GDRIVE_CLIENT_ID = "31946341227-cf4lhvor1dfgnh5tubdm79hon7vr3906.apps.googleusercontent.com";
+
+function getStoredToken() {
+  const tok = localStorage.getItem("ag_gdrive_token") || "";
+  const exp = parseInt(localStorage.getItem("ag_gdrive_token_exp") || "0", 10);
+  if (tok && exp > Date.now()) return tok;
+  return "";
+}
+
 const state = {
   mode: "local", // "cloud" (Google Drive API) oppure "local" (player_server.py)
-  accessToken: sessionStorage.getItem("ag_gdrive_token") || "",
-  clientId: localStorage.getItem("ag_gdrive_client_id") || "",
+  accessToken: getStoredToken(),
+  clientId: localStorage.getItem("ag_gdrive_client_id") || DEFAULT_GDRIVE_CLIENT_ID,
   activeSource: "beatport", // "beatport" | "muzpa"
   activeSubfolder: "ALL",
   localRootPaths: {
@@ -252,11 +261,17 @@ async function initApp() {
 
   setModeUI("cloud-disconnected");
   trackListEl.innerHTML = `
-    <div style="text-align: center; padding: 28px 16px; color: var(--text-muted); font-size: 0.85rem; line-height: 1.5;">
-      ☁️ <strong>Modalità Fuori Casa (Google Drive Cloud)</strong><br><br>
-      Premi <strong>"Connetti Google Drive"</strong> in alto a destra per accedere direttamente alle tue cartelle <strong>Beatport</strong> e <strong>Muzpa</strong> con i Mac spenti.
+    <div style="text-align: center; padding: 28px 16px; color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; display: flex; flex-direction: column; align-items: center; gap: 14px;">
+      <div>☁️ <strong>Modalità Fuori Casa (Google Drive Cloud)</strong><br>Accedi con un tocco alle tue cartelle <strong>Beatport</strong> e <strong>Muzpa</strong> anche a Mac spenti.</div>
+      <button id="btnQuickGoogleLogin" type="button" style="background: var(--cyan); color: #050811; border: none; font-weight: 800; font-size: 0.92rem; padding: 12px 22px; border-radius: 12px; cursor: pointer; box-shadow: 0 0 18px rgba(0,240,255,0.28);">
+        ☁️ Accedi con Google Drive
+      </button>
     </div>
   `;
+  const quickBtn = document.getElementById("btnQuickGoogleLogin");
+  if (quickBtn) {
+    quickBtn.addEventListener("click", () => startGoogleOAuthFlow());
+  }
 }
 
 function setModeUI(mode) {
@@ -310,7 +325,8 @@ async function gdriveFetchJson(url, options = {}) {
   const res = await fetch(url, { ...options, headers });
   if (res.status === 401) {
     state.accessToken = "";
-    sessionStorage.removeItem("ag_gdrive_token");
+    localStorage.removeItem("ag_gdrive_token");
+    localStorage.removeItem("ag_gdrive_token_exp");
     setModeUI("cloud-disconnected");
     throw new Error("Sessione Google scaduta. Premi Connetti Google Drive.");
   }
@@ -793,18 +809,11 @@ btnFwd30.addEventListener("click", () => seekRelative(30));
 btnConfirmNext.addEventListener("click", confirmCurrentAndNext);
 btnTrashNext.addEventListener("click", trashCurrentAndNext);
 
-// Google Drive OAuth Modal
-btnCloudConfig.addEventListener("click", () => {
-  cloudModal.classList.add("active");
-});
-btnCloseModal.addEventListener("click", () => {
-  cloudModal.classList.remove("active");
-});
-
-btnGoogleLogin.addEventListener("click", () => {
-  const cid = gdriveClientIdInput.value.trim();
+// Google Drive OAuth Direct Flow & Modal
+function startGoogleOAuthFlow(customClientId) {
+  const cid = (customClientId || state.clientId || DEFAULT_GDRIVE_CLIENT_ID).trim();
   if (!cid) {
-    showToast("Inserisci un Google OAuth Client ID valido");
+    cloudModal.classList.add("active");
     return;
   }
   state.clientId = cid;
@@ -821,7 +830,9 @@ btnGoogleLogin.addEventListener("click", () => {
     callback: async (resp) => {
       if (resp && resp.access_token) {
         state.accessToken = resp.access_token;
-        sessionStorage.setItem("ag_gdrive_token", resp.access_token);
+        const expiresSec = parseInt(resp.expires_in || "3500", 10);
+        localStorage.setItem("ag_gdrive_token", resp.access_token);
+        localStorage.setItem("ag_gdrive_token_exp", String(Date.now() + (expiresSec - 60) * 1000));
         cloudModal.classList.remove("active");
         setModeUI("cloud");
         showToast("☁️ Connesso a Google Drive!");
@@ -829,7 +840,24 @@ btnGoogleLogin.addEventListener("click", () => {
       }
     }
   });
-  tokenClient.requestAccessToken({ prompt: "consent" });
+  tokenClient.requestAccessToken({ prompt: "" });
+}
+
+btnCloudConfig.addEventListener("click", () => {
+  if (!state.accessToken && state.clientId) {
+    startGoogleOAuthFlow(state.clientId);
+  } else {
+    cloudModal.classList.add("active");
+  }
+});
+
+btnCloseModal.addEventListener("click", () => {
+  cloudModal.classList.remove("active");
+});
+
+btnGoogleLogin.addEventListener("click", () => {
+  const cid = gdriveClientIdInput.value.trim() || DEFAULT_GDRIVE_CLIENT_ID;
+  startGoogleOAuthFlow(cid);
 });
 
 initApp();
