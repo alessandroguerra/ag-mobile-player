@@ -506,10 +506,11 @@ function populateSubfoldersDropdown() {
     if (t.subfolder_name) subs.add(t.subfolder_name);
   });
   const sorted = Array.from(subs).sort();
-  subfolderSelect.innerHTML = `<option value="ALL">Tutte le sottocartelle (${state.allTracks.length} brani)</option>` +
+  subfolderSelect.innerHTML = `<option value="ALL">Tutte le cartelle (${state.allTracks.length})</option>` +
     sorted.map(s => {
       const count = state.allTracks.filter(t => t.subfolder_name === s).length;
-      return `<option value="${s.replace(/"/g, "&quot;")}">${s} (${count})</option>`;
+      const shortLabel = s.length > 28 ? s.slice(0, 27) + "…" : s;
+      return `<option value="${s.replace(/"/g, "&quot;")}">${shortLabel} (${count})</option>`;
     }).join("");
   state.activeSubfolder = "ALL";
 }

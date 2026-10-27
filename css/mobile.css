@@ -23,6 +23,12 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+html, body {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
 body {
   background: var(--bg-main);
   color: var(--text-main);
@@ -32,7 +38,6 @@ body {
   flex-direction: column;
   padding-top: var(--safe-top);
   padding-bottom: var(--safe-bottom);
-  overflow-x: hidden;
   user-select: none;
 }
 
@@ -133,21 +138,31 @@ body {
   display: flex;
   gap: 8px;
   align-items: center;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .subfolder-select {
-  flex: 1;
+  flex: 1 1 0%;
+  width: 0;
+  min-width: 0;
+  max-width: 100%;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   color: var(--text-main);
-  padding: 9px 12px;
+  padding: 9px 10px;
   border-radius: 9px;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 600;
   outline: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .btn-refresh {
+  flex-shrink: 0;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   color: var(--text-main);
