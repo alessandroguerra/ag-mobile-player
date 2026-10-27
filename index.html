@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#07090e">
+  <title>AlexGherra Mobile Player</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="stylesheet" href="./css/mobile.css?v=1.0">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+  <!-- TOP HEADER -->
+  <header class="m-header">
+    <div class="m-brand">
+      <span class="m-brand-dot"></span>
+      <span class="m-brand-title">AG Mobile Deck</span>
+    </div>
+    <button id="btnCloudConfig" class="m-mode-btn" type="button">
+      <span id="modeIcon">☁️</span>
+      <span id="modeText">Connetti Google Drive</span>
+    </button>
+  </header>
+
+  <!-- SOURCE BAR: SOLO BEATPORT & MUZPA -->
+  <section class="source-bar">
+    <div class="source-pills">
+      <button id="pillBeatport" class="source-pill active" type="button" data-source="beatport">
+        🎧 Beatport
+      </button>
+      <button id="pillMuzpa" class="source-pill" type="button" data-source="muzpa">
+        🚀 Muzpa
+      </button>
+    </div>
+    <div class="subfolder-row">
+      <select id="subfolderSelect" class="subfolder-select">
+        <option value="ALL">Tutte le sottocartelle</option>
+      </select>
+      <button id="btnRefresh" class="btn-refresh" type="button" title="Aggiorna elenco">🔄</button>
+    </div>
+  </section>
+
+  <!-- MAIN DECK (NO WAVEFORM, NO QUICK MOVE) -->
+  <main class="m-deck">
+    <div class="track-info-card">
+      <div class="track-meta-top">
+        <span id="deckSubfolder" class="subfolder-tag">--</span>
+        <span id="deckPos" class="track-pos-badge">0 / 0</span>
+      </div>
+      <div>
+        <div id="deckTitle" class="track-title">Seleziona un brano</div>
+        <div id="deckArtist" class="track-artist">--</div>
+        <div id="deckGenre" class="track-genre">--</div>
+      </div>
+
+      <!-- CAMELOT / BPM / ENERGY -->
+      <div class="hero-metrics">
+        <div class="metric-box">
+          <span class="metric-label">Camelot</span>
+          <span id="deckCamelot" class="metric-val camelot-pill">--</span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">BPM</span>
+          <span id="deckBpm" class="metric-val" style="color: var(--cyan);">--</span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Energia</span>
+          <span id="deckEnergy" class="metric-val energy-pill">--</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLEAN PROGRESS SCRUBBER (NO WAVEFORM) -->
+    <div class="scrubber-card">
+      <input id="scrubberSlider" class="scrubber-slider" type="range" min="0" max="100" step="0.1" value="0">
+      <div class="time-row">
+        <span id="timeElapsed">00:00</span>
+        <span id="timeDuration">--:--</span>
+      </div>
+    </div>
+
+    <!-- TRANSPORT CONTROLS -->
+    <div class="transport-grid">
+      <button id="btnPrev" class="btn-t" type="button" title="Brano Precedente">⏮</button>
+      <button id="btnBack10" class="btn-t" type="button" title="-10 secondi">-10s</button>
+      <button id="btnPlayPause" class="btn-t play-btn" type="button" title="Play / Pausa">▶</button>
+      <button id="btnFwd10" class="btn-t" type="button" title="+10 secondi">+10s</button>
+      <button id="btnFwd30" class="btn-t" type="button" title="+30 secondi">+30s</button>
+      <button id="btnNext" class="btn-t" type="button" title="Brano Successivo">⏭</button>
+    </div>
+
+    <!-- DECISION BUTTONS: CESTINA vs OK ASCOLTATO -->
+    <div class="decision-grid">
+      <button id="btnTrashNext" class="btn-decision trash" type="button">
+        <span>🗑️</span>
+        <span>Cestina &amp; Next</span>
+      </button>
+      <button id="btnConfirmNext" class="btn-decision confirm" type="button">
+        <span>✅</span>
+        <span>OK Ascoltato</span>
+      </button>
+    </div>
+  </main>
+
+  <!-- TRACKLIST & SESSION FILTERS -->
+  <section class="m-playlist">
+    <div class="session-bar">
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-filter="all" id="tabAll" type="button">Tutti (0)</button>
+        <button class="filter-tab" data-filter="pending" id="tabPending" type="button">Da Ascoltare (0)</button>
+        <button class="filter-tab" data-filter="confirmed" id="tabConfirmed" type="button">Ascoltati (0)</button>
+      </div>
+      <button id="btnResume" class="btn-resume" type="button">▶ Riprendi</button>
+    </div>
+
+    <div id="trackList" class="track-list">
+      <div style="text-align: center; color: var(--text-muted); padding: 24px 12px; font-size: 0.84rem;">
+        Caricamento libreria musicale...
+      </div>
+    </div>
+  </section>
+
+  <!-- MODAL: GOOGLE DRIVE CLOUD AUTH -->
+  <div id="cloudModal" class="m-modal">
+    <div class="m-modal-card">
+      <div class="m-modal-title">☁️ Connessione Google Drive (Opzione C)</div>
+      <div class="m-modal-desc">
+        Per usare il Player fuori casa con tutti i Mac spenti, inserisci il tuo <strong>Google OAuth Client ID</strong> (Web Application) e premi <strong>Accedi con Google</strong>.<br><br>
+        L'app leggerà direttamente su Google Drive solo le cartelle <code>!!!BeatportDownload</code> e <code>!!!MuzpaDownload</code>, sincronizzando <code>ascoltati.txt</code> e il cestino.
+      </div>
+      <input id="gdriveClientIdInput" class="m-input" type="text" placeholder="es. 123456789-abc.apps.googleusercontent.com">
+      <div class="m-modal-actions">
+        <button id="btnCloseModal" class="m-btn" type="button">Chiudi</button>
+        <button id="btnGoogleLogin" class="m-btn primary" type="button">Accedi con Google</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="mToast" class="m-toast"></div>
+
+  <!-- NATIVE AUDIO -->
+  <audio id="audioEl" preload="metadata"></audio>
+
+  <script src="./js/mobile.js?v=1.0"></script>
+</body>
+</html>
+
