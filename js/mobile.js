@@ -110,21 +110,41 @@ const actionLoadingOverlay = document.getElementById("actionLoadingOverlay");
 const actionLoadingText = document.getElementById("actionLoadingText");
 const actionLoadingSub = document.getElementById("actionLoadingSub");
 
+let _overlayShownAt = 0;
+let _overlayWaitForAudioReady = false;
+
 function showLoadingOverlay(title = "Avvio prossimo brano...", subtitle = "Attendere il caricamento audio") {
   state.isBusy = true;
+  _overlayShownAt = Date.now();
+  _overlayWaitForAudioReady = true;
+  clearTimeout(window._agOverlayHideTimer);
   if (actionLoadingText) actionLoadingText.textContent = title;
   if (actionLoadingSub) actionLoadingSub.textContent = subtitle;
-  if (actionLoadingOverlay) actionLoadingOverlay.classList.add("active");
+  if (actionLoadingOverlay) {
+    actionLoadingOverlay.style.display = "flex";
+    actionLoadingOverlay.classList.add("active");
+  }
   clearTimeout(window._agOverlaySafetyTimer);
   window._agOverlaySafetyTimer = setTimeout(() => {
-    hideLoadingOverlay();
+    hideLoadingOverlay(true);
   }, 15000);
 }
 
-function hideLoadingOverlay() {
-  state.isBusy = false;
+function hideLoadingOverlay(forceImmediate = false) {
   clearTimeout(window._agOverlaySafetyTimer);
-  if (actionLoadingOverlay) actionLoadingOverlay.classList.remove("active");
+  clearTimeout(window._agOverlayHideTimer);
+  const elapsed = Date.now() - _overlayShownAt;
+  const minDuration = 700; // Garantisce blocco anti-doppio-click per almeno 700ms
+  const remaining = forceImmediate ? 0 : Math.max(0, minDuration - elapsed);
+
+  window._agOverlayHideTimer = setTimeout(() => {
+    state.isBusy = false;
+    _overlayWaitForAudioReady = false;
+    if (actionLoadingOverlay) {
+      actionLoadingOverlay.classList.remove("active");
+      actionLoadingOverlay.style.display = "none";
+    }
+  }, remaining);
 }
 
 function showToast(msg) {
@@ -635,9 +655,12 @@ async function loadTrack(index, autoPlay = true, customOverlayTitle = null) {
       customOverlayTitle || "🎵 Caricamento brano...",
       `${track.artist} — ${track.title}`
     );
+    // Forza il browser a disegnare subito il layer prima di scaricare il file
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
   }
 
-  // Metti subito in pausa l'audio precedente durante la transizione
+  // Blocca eventi residui del vecchio brano finché non viene impostato il nuovo src
+  _overlayWaitForAudioReady = false;
   try {
     audioEl.pause();
   } catch (e) {}
@@ -655,10 +678,12 @@ async function loadTrack(index, autoPlay = true, customOverlayTitle = null) {
   timeDuration.textContent = track.duration_formatted || "--:--";
 
   if (state.mode === "local") {
+    _overlayWaitForAudioReady = true;
     audioEl.src = `/api/stream?file=${encodeURIComponent(track.filepath)}`;
     if (autoPlay) {
       try {
         await audioEl.play();
+        hideLoadingOverlay();
       } catch (e) {
         hideLoadingOverlay();
       }
@@ -675,10 +700,12 @@ async function loadTrack(index, autoPlay = true, customOverlayTitle = null) {
       if (!res.ok) throw new Error("Impossibile riprodurre file da Google Drive");
       const blob = await res.blob();
       state.currentObjectUrl = URL.createObjectURL(blob);
+      _overlayWaitForAudioReady = true;
       audioEl.src = state.currentObjectUrl;
       if (autoPlay) {
         try {
           await audioEl.play();
+          hideLoadingOverlay();
         } catch (e) {
           hideLoadingOverlay();
         }
@@ -863,13 +890,13 @@ btnPlayPause.addEventListener("click", () => {
 audioEl.addEventListener("play", () => { btnPlayPause.textContent = "⏸"; });
 audioEl.addEventListener("playing", () => {
   btnPlayPause.textContent = "⏸";
-  hideLoadingOverlay();
+  if (_overlayWaitForAudioReady) hideLoadingOverlay();
 });
 audioEl.addEventListener("canplay", () => {
-  if (!audioEl.paused) hideLoadingOverlay();
+  if (_overlayWaitForAudioReady && !audioEl.paused) hideLoadingOverlay();
 });
 audioEl.addEventListener("error", () => {
-  hideLoadingOverlay();
+  if (_overlayWaitForAudioReady) hideLoadingOverlay();
 });
 audioEl.addEventListener("pause", () => { btnPlayPause.textContent = "▶"; });
 audioEl.addEventListener("ended", () => { playNext(); });
