@@ -608,10 +608,12 @@ function updateDeckUI(track) {
     deckTitle.textContent = "Nessun brano";
     deckArtist.textContent = "--";
     deckGenre.textContent = "--";
-    deckCamelot.textContent = "--";
-    deckCamelot.style.background = "#64748b";
-    deckBpm.textContent = "--";
-    deckEnergy.textContent = "--";
+    if (deckCamelot) {
+      deckCamelot.textContent = "--";
+      deckCamelot.style.background = "#64748b";
+    }
+    if (deckBpm) deckBpm.textContent = "--";
+    if (deckEnergy) deckEnergy.textContent = "--";
     return;
   }
 
@@ -622,10 +624,12 @@ function updateDeckUI(track) {
   deckGenre.textContent = track.genre || "DJ Track";
 
   const cam = normalizeCamelot(track.camelot);
-  deckCamelot.textContent = cam;
-  deckCamelot.style.background = CAMELOT_COLORS[cam] || "#64748b";
-  deckBpm.textContent = track.bpm || "--";
-  deckEnergy.textContent = track.energy || "--";
+  if (deckCamelot) {
+    deckCamelot.textContent = cam;
+    deckCamelot.style.background = CAMELOT_COLORS[cam] || "#64748b";
+  }
+  if (deckBpm) deckBpm.textContent = track.bpm || "--";
+  if (deckEnergy) deckEnergy.textContent = track.energy || "--";
 
   if ("mediaSession" in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -912,14 +916,16 @@ scrubberSlider.addEventListener("input", () => {
   audioEl.currentTime = (parseFloat(scrubberSlider.value) / 100) * audioEl.duration;
 });
 
-btnPrev.addEventListener("click", () => playPrev());
-btnNext.addEventListener("click", () => {
-  if (state.isBusy) return;
-  playNext();
-});
-btnBack10.addEventListener("click", () => seekRelative(-10));
-btnFwd10.addEventListener("click", () => seekRelative(10));
-btnFwd30.addEventListener("click", () => seekRelative(30));
+if (btnPrev) btnPrev.addEventListener("click", () => playPrev());
+if (btnNext) {
+  btnNext.addEventListener("click", () => {
+    if (state.isBusy) return;
+    playNext();
+  });
+}
+if (btnBack10) btnBack10.addEventListener("click", () => seekRelative(-10));
+if (btnFwd10) btnFwd10.addEventListener("click", () => seekRelative(10));
+if (btnFwd30) btnFwd30.addEventListener("click", () => seekRelative(30));
 
 btnConfirmNext.addEventListener("click", confirmCurrentAndNext);
 btnTrashNext.addEventListener("click", trashCurrentAndNext);

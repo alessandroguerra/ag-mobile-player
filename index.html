@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#07090e">
   <title>AlexGherra Mobile Player</title>
   <link rel="manifest" href="./manifest.json">
-  <link rel="stylesheet" href="./css/mobile.css?v=1.4">
+  <link rel="stylesheet" href="./css/mobile.css?v=1.5">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -43,7 +43,7 @@
     </div>
   </section>
 
-  <!-- MAIN DECK (NO WAVEFORM, NO QUICK MOVE) -->
+  <!-- MAIN DECK (NO WAVEFORM, NO QUICK MOVE, BIG TOUCH BUTTONS) -->
   <main class="m-deck">
     <div class="track-info-card">
       <div class="track-meta-top">
@@ -54,22 +54,6 @@
         <div id="deckTitle" class="track-title">Seleziona un brano</div>
         <div id="deckArtist" class="track-artist">--</div>
         <div id="deckGenre" class="track-genre">--</div>
-      </div>
-
-      <!-- CAMELOT / BPM / ENERGY -->
-      <div class="hero-metrics">
-        <div class="metric-box">
-          <span class="metric-label">Camelot</span>
-          <span id="deckCamelot" class="metric-val camelot-pill">--</span>
-        </div>
-        <div class="metric-box">
-          <span class="metric-label">BPM</span>
-          <span id="deckBpm" class="metric-val" style="color: var(--cyan);">--</span>
-        </div>
-        <div class="metric-box">
-          <span class="metric-label">Energia</span>
-          <span id="deckEnergy" class="metric-val energy-pill">--</span>
-        </div>
       </div>
     </div>
 
@@ -82,24 +66,20 @@
       </div>
     </div>
 
-    <!-- TRANSPORT CONTROLS -->
+    <!-- TRANSPORT CONTROLS: SOLO PLAY/PAUSA & +30s GIGANTE -->
     <div class="transport-grid">
-      <button id="btnPrev" class="btn-t" type="button" title="Brano Precedente">⏮</button>
-      <button id="btnBack10" class="btn-t" type="button" title="-10 secondi">-10s</button>
       <button id="btnPlayPause" class="btn-t play-btn" type="button" title="Play / Pausa">▶</button>
-      <button id="btnFwd10" class="btn-t" type="button" title="+10 secondi">+10s</button>
-      <button id="btnFwd30" class="btn-t" type="button" title="+30 secondi">+30s</button>
-      <button id="btnNext" class="btn-t" type="button" title="Brano Successivo">⏭</button>
+      <button id="btnFwd30" class="btn-t fwd30-btn" type="button" title="Avanti di 30 secondi">⏩ +30s</button>
     </div>
 
-    <!-- DECISION BUTTONS: CESTINA vs OK ASCOLTATO -->
+    <!-- DECISION BUTTONS GIGANTI: CESTINA vs OK ASCOLTATO -->
     <div class="decision-grid">
       <button id="btnTrashNext" class="btn-decision trash" type="button">
-        <span>🗑️</span>
+        <span class="decision-icon">🗑️</span>
         <span>Cestina &amp; Next</span>
       </button>
       <button id="btnConfirmNext" class="btn-decision confirm" type="button">
-        <span>✅</span>
+        <span class="decision-icon">✅</span>
         <span>OK Ascoltato</span>
       </button>
     </div>
@@ -154,7 +134,7 @@
   <!-- NATIVE AUDIO -->
   <audio id="audioEl" preload="metadata"></audio>
 
-  <script src="./js/mobile.js?v=1.4"></script>
+  <script src="./js/mobile.js?v=1.5"></script>
 </body>
 </html>
 

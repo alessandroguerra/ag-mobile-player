@@ -321,31 +321,32 @@ body {
   color: var(--text-muted);
 }
 
-/* ── TRANSPORT CONTROLS ── */
+/* ── TRANSPORT CONTROLS (SOLO PLAY & +30s GIGANTI) ── */
 .transport-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 6px;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
   align-items: center;
 }
 
 .btn-t {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   color: var(--text-main);
-  height: 48px;
-  border-radius: 12px;
-  font-size: 0.78rem;
-  font-weight: 700;
+  height: 68px;
+  border-radius: 16px;
+  font-size: 1.25rem;
+  font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   cursor: pointer;
   transition: transform 0.1s ease, background 0.15s ease;
 }
 
 .btn-t:active {
-  transform: scale(0.95);
+  transform: scale(0.96);
   background: var(--bg-elevated);
 }
 
@@ -353,29 +354,43 @@ body {
   background: var(--cyan);
   color: #050811;
   border-color: var(--cyan);
-  font-size: 1.15rem;
-  box-shadow: 0 0 16px rgba(0, 240, 255, 0.3);
+  font-size: 1.55rem;
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.32);
 }
 
-/* ── DECISION BUTTONS: CESTINA vs OK ASCOLTATO ── */
+.btn-t.fwd30-btn {
+  background: var(--bg-elevated);
+  border-color: rgba(0, 240, 255, 0.4);
+  color: var(--cyan);
+  font-size: 1.25rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+/* ── DECISION BUTTONS GIGANTI: CESTINA vs OK ASCOLTATO ── */
 .decision-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
 }
 
 .btn-decision {
-  height: 54px;
-  border-radius: 14px;
-  font-size: 0.92rem;
+  height: 82px;
+  border-radius: 16px;
+  font-size: 1.08rem;
   font-weight: 800;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
-  border: 1px solid transparent;
+  border: 1.5px solid transparent;
   transition: transform 0.1s ease;
+}
+
+.decision-icon {
+  font-size: 1.45rem;
+  line-height: 1;
 }
 
 .btn-decision:active {
@@ -384,14 +399,16 @@ body {
 
 .btn-decision.trash {
   background: var(--red-dim);
-  border-color: rgba(239, 68, 68, 0.45);
+  border-color: rgba(239, 68, 68, 0.55);
   color: #fca5a5;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.12);
 }
 
 .btn-decision.confirm {
   background: var(--green-dim);
-  border-color: rgba(16, 185, 129, 0.45);
+  border-color: rgba(16, 185, 129, 0.55);
   color: #6ee7b7;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.12);
 }
 
 /* ── PLAYLIST & SESSION TABS ── */
